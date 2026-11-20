@@ -1,1 +1,3 @@
-# ai-playground
+# AI Playground
+
+OpenAI-Compatible API Parameter Playground
