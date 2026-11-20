@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAI-Compatible API Parameter Playground</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #181b23;
+      --border: #2a2f3d;
+      --text: #e6e8ef;
+      --muted: #949ba8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --danger: #ef4444;
+      --success: #10b981;
+      --code-bg: #111318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+    @media (max-width: 900px) {
+      body { grid-template-columns: 1fr; height: auto; overflow: auto; }
+    }
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .main {
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      gap: 14px;
+      overflow-y: auto;
+    }
+    h2, h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(255,255,255,0.01);
+    }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="password"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .param-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .param-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+    .param-header label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      color: var(--text);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .param-val { font-family: monospace; color: var(--accent); font-size: 12px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .preset-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+    button {
+      background: #232836;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+    button.primary:hover { background: var(--accent-hover); }
+    button.danger { border-color: var(--danger); color: var(--danger); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      gap: 10px;
+    }
+    .output-header label {
+      margin: 0;
+    }
+    .output-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .view-toggle {
+      display: inline-flex;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .view-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .output-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 180px;
+      max-height: 360px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    .meta-bar {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .meta-bar span strong { color: var(--text); }
+    .hint { font-size: 11px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR: ENDPOINT & PARAMETERS -->
+  <div class="sidebar">
+    <h1>API Parameter Tester</h1>
+
+    <div class="section">
+      <h3>1. Provider Preset</h3>
+      <div class="preset-bar">
+        <button type="button" onclick="applyPreset('openai')">OpenAI</button>
+        <button type="button" onclick="applyPreset('groq')">Groq</button>
+        <button type="button" onclick="applyPreset('gemini')">Google AI Studio</button>
+        <button type="button" onclick="applyPreset('openrouter')">OpenRouter</button>
+        <button type="button" onclick="applyPreset('ollama')">Ollama (Local)</button>
+      </div>
+      <div>
+        <label>Endpoint URL (Full Chat Completions URL)</label>
+        <input type="text" id="endpoint" value="https://api.openai.com/v1/chat/completions" />
+      </div>
+      <div>
+        <label>API Key (Stored only in your browser localStorage)</label>
+        <input type="password" id="apiKey" placeholder="sk-... or gsk_... or AIza..." />
+      </div>
+      <div>
+        <label>Model ID</label>
+        <input type="text" id="model" value="gpt-4o-mini" />
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>2. Adjustable Parameters (Check to Include)</h3>
+      <div class="hint">Uncheck parameters unsupported by your chosen provider.</div>
+
+      <!-- Stream -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_stream" checked onchange="updatePreviews()" /> stream (SSE)</label>
+          <input type="checkbox" id="val_stream" checked onchange="updatePreviews()" />
+        </div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_temperature" checked onchange="updatePreviews()" /> temperature</label>
+          <span class="param-val" id="disp_temperature">0.7</span>
+        </div>
+        <input type="range" id="val_temperature" min="0" max="2" step="0.05" value="0.7"
+               oninput="document.getElementById('disp_temperature').textContent=this.value; updatePreviews()" />
+      </div>
+
+      <!-- Top P -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_top_p" onchange="updatePreviews()" /> top_p</label>
+          <span class="param-val" id="disp_top_p">1.0</span>
+        </div>
+        <input type="range" id="val_top_p" min="0" max="1" step="0.05" value="1.0"
+               oninput="document.getElementById('disp_top_p').textContent=this.value; updatePreviews()" />
+      </div>
+
+      <!-- Max Completion Tokens -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_max_completion_tokens" checked onchange="updatePreviews()" /> max_completion_tokens</label>
+        </div>
+        <input type="number" id="val_max_completion_tokens" value="512" min="1" max="128000" oninput="updatePreviews()" />
+      </div>
+
+      <!-- Legacy Max Tokens -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_max_tokens" onchange="updatePreviews()" /> max_tokens (legacy/compat)</label>
+        </div>
+        <input type="number" id="val_max_tokens" value="512" min="1" max="128000" oninput="updatePreviews()" />
+      </div>
+
+      <!-- Frequency Penalty -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_frequency_penalty" onchange="updatePreviews()" /> frequency_penalty</label>
+          <span class="param-val" id="disp_frequency_penalty">0.0</span>
+        </div>
+        <input type="range" id="val_frequency_penalty" min="-2" max="2" step="0.1" value="0.0"
+               oninput="document.getElementById('disp_frequency_penalty').textContent=this.value; updatePreviews()" />
+      </div>
+
+      <!-- Presence Penalty -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_presence_penalty" onchange="updatePreviews()" /> presence_penalty</label>
+          <span class="param-val" id="disp_presence_penalty">0.0</span>
+        </div>
+        <input type="range" id="val_presence_penalty" min="-2" max="2" step="0.1" value="0.0"
+               oninput="document.getElementById('disp_presence_penalty').textContent=this.value; updatePreviews()" />
+      </div>
+
+      <!-- Seed -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_seed" onchange="updatePreviews()" /> seed</label>
+        </div>
+        <input type="number" id="val_seed" value="42" oninput="updatePreviews()" />
+      </div>
+
+      <!-- Stop Sequences -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_stop" onchange="updatePreviews()" /> stop (comma-separated)</label>
+        </div>
+        <input type="text" id="val_stop" placeholder="END, ###" oninput="updatePreviews()" />
+      </div>
+
+      <!-- Reasoning Effort -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_reasoning_effort" onchange="updatePreviews()" /> reasoning_effort</label>
+        </div>
+        <select id="val_reasoning_effort" onchange="updatePreviews()">
+          <option value="none">none</option>
+          <option value="low">low</option>
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+        </select>
+      </div>
+
+      <!-- Response Format -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_response_format" onchange="updatePreviews()" /> response_format</label>
+        </div>
+        <select id="val_response_format" onchange="updatePreviews()">
+          <option value="text">text</option>
+          <option value="json_object">json_object (Mention "JSON" in prompt)</option>
+        </select>
+      </div>
+
+      <!-- Logprobs -->
+      <div class="param-row">
+        <div class="param-header">
+          <label><input type="checkbox" id="use_logprobs" onchange="updatePreviews()" /> logprobs + top_logprobs</label>
+        </div>
+        <input type="number" id="val_top_logprobs" value="3" min="0" max="20" oninput="updatePreviews()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT MAIN PANEL: PROMPTS, RESPONSE, PAYLOAD & CURL -->
+  <div class="main">
+    <div class="grid-2">
+      <div>
+        <label>System / Developer Prompt (Optional)</label>
+        <textarea id="sysPrompt" rows="3" oninput="updatePreviews()">You are a concise, accurate technical assistant.</textarea>
+      </div>
+      <div>
+        <label>User Prompt</label>
+        <textarea id="userPrompt" rows="3" oninput="updatePreviews()">Explain how DNS resolution works in 3 bullet points.</textarea>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="primary" id="sendBtn" onclick="sendRequest()">Send Request</button>
+      <button class="danger" id="stopBtn" onclick="abortRequest()" style="display:none;">Stop Stream</button>
+      <button type="button" onclick="copyCurl()">Copy cURL Command</button>
+      <span id="statusText" style="font-size:13px; color:var(--muted);">Ready</span>
+    </div>
+
+    <div class="meta-bar">
+      <span>Status: <strong id="metaStatus">-</strong></span>
+      <span>Latency: <strong id="metaLatency">-</strong></span>
+      <span>Tokens (In / Out / Total): <strong id="metaTokens">-</strong></span>
+    </div>
+
+    <div>
+      <div class="output-header">
+        <label>Model Response</label>
+        <div class="output-actions">
+          <div class="view-toggle">
+            <button type="button" id="btnViewFormatted" class="active" onclick="setResponseView('formatted')">Formatted</button>
+            <button type="button" id="btnViewRaw" onclick="setResponseView('raw')">Raw Response</button>
+          </div>
+          <button type="button" id="copyResponseBtn" onclick="copyResponse()">Copy Response</button>
+        </div>
+      </div>
+      <div class="output-box" id="responseOutput">Click "Send Request" to test your configuration...</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Live JSON Request Payload</label>
+        <div class="output-box" id="payloadPreview" style="min-height:150px; max-height:220px;"></div>
+      </div>
+      <div>
+        <label>Equivalent cURL Command</label>
+        <div class="output-box" id="curlPreview" style="min-height:150px; max-height:220px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PRESETS = {
+      openai: {
+        endpoint: "https://api.openai.com/v1/chat/completions",
+        model: "gpt-4o-mini",
+        maxComp: true,
+        maxTok: false
+      },
+      groq: {
+        endpoint: "https://api.groq.com/openai/v1/chat/completions",
+        model: "llama-3.3-70b-versatile",
+        maxComp: true,
+        maxTok: false
+      },
+      gemini: {
+        endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        model: "gemini-2.5-flash",
+        maxComp: false,
+        maxTok: true
+      },
+      openrouter: {
+        endpoint: "https://openrouter.ai/api/v1/chat/completions",
+        model: "openai/gpt-4o-mini",
+        maxComp: false,
+        maxTok: true
+      },
+      ollama: {
+        endpoint: "http://localhost:11434/v1/chat/completions",
+        model: "llama3.2",
+        maxComp: false,
+        maxTok: true
+      }
+    };
+
+    let abortController = null;
+    let currentView = "formatted"; // "formatted" | "raw"
+    let formattedContent = 'Click "Send Request" to test your configuration...';
+    let rawContent = 'Click "Send Request" to test your configuration...';
+
+    // Load saved keys per endpoint from localStorage
+    const endpointInput = document.getElementById("endpoint");
+    const apiKeyInput = document.getElementById("apiKey");
+    const modelInput = document.getElementById("model");
+
+    function loadSavedKey() {
+      const saved = localStorage.getItem("apikey_" + endpointInput.value.trim());
+      apiKeyInput.value = saved || "";
+    }
+
+    apiKeyInput.addEventListener("input", () => {
+      localStorage.setItem("apikey_" + endpointInput.value.trim(), apiKeyInput.value);
+    });
+    endpointInput.addEventListener("input", () => {
+      loadSavedKey();
+      updatePreviews();
+    });
+    modelInput.addEventListener("input", updatePreviews);
+
+    function renderResponseBox() {
+      const outEl = document.getElementById("responseOutput");
+      outEl.textContent = currentView === "formatted" ? formattedContent : rawContent;
+    }
+
+    function setResponseView(view) {
+      currentView = view;
+      document.getElementById("btnViewFormatted").classList.toggle("active", view === "formatted");
+      document.getElementById("btnViewRaw").classList.toggle("active", view === "raw");
+      renderResponseBox();
+    }
+
+    function copyResponse() {
+      const textToCopy = currentView === "formatted" ? formattedContent : rawContent;
+      navigator.clipboard.writeText(textToCopy);
+      const btn = document.getElementById("copyResponseBtn");
+      const originalText = btn.textContent;
+      btn.textContent = "Copied!";
+      document.getElementById("statusText").textContent = `Copied ${currentView} response to clipboard!`;
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 1500);
+    }
+
+    function applyPreset(name) {
+      const p = PRESETS[name];
+      endpointInput.value = p.endpoint;
+      modelInput.value = p.model;
+      document.getElementById("use_max_completion_tokens").checked = p.maxComp;
+      document.getElementById("use_max_tokens").checked = p.maxTok;
+      if (name === "groq" || name === "gemini") {
+        document.getElementById("use_logprobs").checked = false;
+      }
+      loadSavedKey();
+      updatePreviews();
+    }
+
+    function buildPayload() {
+      const messages = [];
+      const sys = document.getElementById("sysPrompt").value.trim();
+      const usr = document.getElementById("userPrompt").value.trim();
+      if (sys) messages.push({ role: "system", content: sys });
+      if (usr) messages.push({ role: "user", content: usr });
+
+      const payload = {
+        model: modelInput.value.trim(),
+        messages
+      };
+
+      if (document.getElementById("use_stream").checked) {
+        payload.stream = document.getElementById("val_stream").checked;
+      }
+      if (document.getElementById("use_temperature").checked) {
+        payload.temperature = parseFloat(document.getElementById("val_temperature").value);
+      }
+      if (document.getElementById("use_top_p").checked) {
+        payload.top_p = parseFloat(document.getElementById("val_top_p").value);
+      }
+      if (document.getElementById("use_max_completion_tokens").checked) {
+        payload.max_completion_tokens = parseInt(document.getElementById("val_max_completion_tokens").value, 10);
+      }
+      if (document.getElementById("use_max_tokens").checked) {
+        payload.max_tokens = parseInt(document.getElementById("val_max_tokens").value, 10);
+      }
+      if (document.getElementById("use_frequency_penalty").checked) {
+        payload.frequency_penalty = parseFloat(document.getElementById("val_frequency_penalty").value);
+      }
+      if (document.getElementById("use_presence_penalty").checked) {
+        payload.presence_penalty = parseFloat(document.getElementById("val_presence_penalty").value);
+      }
+      if (document.getElementById("use_seed").checked) {
+        payload.seed = parseInt(document.getElementById("val_seed").value, 10);
+      }
+      if (document.getElementById("use_stop").checked) {
+        const stops = document.getElementById("val_stop").value.split(",").map(s => s.trim()).filter(Boolean);
+        if (stops.length) payload.stop = stops;
+      }
+      if (document.getElementById("use_reasoning_effort").checked) {
+        payload.reasoning_effort = document.getElementById("val_reasoning_effort").value;
+      }
+      if (document.getElementById("use_response_format").checked) {
+        payload.response_format = { type: document.getElementById("val_response_format").value };
+      }
+      if (document.getElementById("use_logprobs").checked) {
+        payload.logprobs = true;
+        payload.top_logprobs = parseInt(document.getElementById("val_top_logprobs").value, 10);
+      }
+
+      return payload;
+    }
+
+    function updatePreviews() {
+      const payload = buildPayload();
+      const jsonStr = JSON.stringify(payload, null, 2);
+      document.getElementById("payloadPreview").textContent = jsonStr;
+
+      const endpoint = endpointInput.value.trim();
+      const escapedJson = jsonStr.replace(/'/g, "'\\''");
+      document.getElementById("curlPreview").textContent =
+`curl ${endpoint} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer $API_KEY" \\
+  -d '${escapedJson}'`;
+    }
+
+    function copyCurl() {
+      navigator.clipboard.writeText(document.getElementById("curlPreview").textContent);
+      document.getElementById("statusText").textContent = "Copied cURL to clipboard!";
+    }
+
+    function abortRequest() {
+      if (abortController) abortController.abort();
+    }
+
+    async function sendRequest() {
+      const endpoint = endpointInput.value.trim();
+      const apiKey = apiKeyInput.value.trim();
+      const payload = buildPayload();
+
+      const statusEl = document.getElementById("statusText");
+      const sendBtn = document.getElementById("sendBtn");
+      const stopBtn = document.getElementById("stopBtn");
+
+      formattedContent = "";
+      rawContent = "";
+      renderResponseBox();
+
+      document.getElementById("metaStatus").textContent = "Pending...";
+      document.getElementById("metaLatency").textContent = "-";
+      document.getElementById("metaTokens").textContent = "-";
+
+      abortController = new AbortController();
+      sendBtn.disabled = true;
+      stopBtn.style.display = "inline-block";
+      statusEl.textContent = "Sending request...";
+
+      const startTime = performance.now();
+
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+          signal: abortController.signal
+        });
+
+        document.getElementById("metaStatus").textContent = `${res.status} ${res.statusText}`;
+
+        if (!res.ok) {
+          const errText = await res.text();
+          let prettyErr = errText;
+          try {
+            prettyErr = JSON.stringify(JSON.parse(errText), null, 2);
+          } catch (_) {}
+          formattedContent = `HTTP Error ${res.status}:\n\n${prettyErr}`;
+          rawContent = prettyErr;
+          renderResponseBox();
+          statusEl.textContent = "Request failed";
+          return;
+        }
+
+        if (payload.stream) {
+          statusEl.textContent = "Streaming...";
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            rawContent += chunk;
+            buffer += chunk;
+
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith("data:")) continue;
+              const dataStr = trimmed.slice(5).trim();
+              if (dataStr === "[DONE]") continue;
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                const delta = parsed.choices?.[0]?.delta;
+                if (delta?.reasoning_content) {
+                  formattedContent += delta.reasoning_content;
+                }
+                if (delta?.content) {
+                  formattedContent += delta.content;
+                }
+                if (parsed.usage) {
+                  const u = parsed.usage;
+                  document.getElementById("metaTokens").textContent =
+                    `${u.prompt_tokens ?? "?"} / ${u.completion_tokens ?? "?"} / ${u.total_tokens ?? "?"}`;
+                }
+              } catch (_) {}
+            }
+            renderResponseBox();
+          }
+        } else {
+          const rawText = await res.text();
+          let data;
+          try {
+            data = JSON.parse(rawText);
+            rawContent = JSON.stringify(data, null, 2);
+          } catch (_) {
+            rawContent = rawText;
+          }
+
+          if (data) {
+            const msg = data.choices?.[0]?.message;
+            let text = "";
+            if (msg?.reasoning_content) {
+              text += `[Reasoning]\n${msg.reasoning_content}\n\n[Answer]\n`;
+            }
+            text += msg?.content ?? rawContent;
+            formattedContent = text;
+
+            if (data.usage) {
+              const u = data.usage;
+              document.getElementById("metaTokens").textContent =
+                `${u.prompt_tokens ?? "?"} / ${u.completion_tokens ?? "?"} / ${u.total_tokens ?? "?"}`;
+            }
+          } else {
+            formattedContent = rawContent;
+          }
+          renderResponseBox();
+        }
+
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+        document.getElementById("metaLatency").textContent = `${elapsed}s`;
+        statusEl.textContent = "Completed";
+      } catch (err) {
+        if (err.name === "AbortError") {
+          statusEl.textContent = "Aborted by user";
+        } else {
+          const errMsg = `Network / CORS Error:\n${err.message}\n\nTip: Check browser DevTools console (F12). If testing a local server like Ollama, ensure CORS is enabled.`;
+          formattedContent = errMsg;
+          rawContent = errMsg;
+          renderResponseBox();
+          statusEl.textContent = "Error";
+        }
+      } finally {
+        sendBtn.disabled = false;
+        stopBtn.style.display = "none";
+        abortController = null;
+      }
+    }
+
+    // Initialize
+    loadSavedKey();
+    updatePreviews();
+  </script>
+</body>
+</html>
