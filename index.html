@@ -69,6 +69,77 @@
       font-size: 13px;
       font-family: inherit;
     }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrap input {
+      padding-right: 28px;
+    }
+    .clear-btn {
+      position: absolute;
+      right: 6px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1;
+      padding: 4px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .clear-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: transparent;
+    }
+    .saved-models {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .model-chip {
+      display: inline-flex;
+      align-items: center;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow: hidden;
+      transition: 0.15s;
+    }
+    .model-chip.active {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.12);
+    }
+    .model-chip-name {
+      padding: 3px 7px;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .model-chip-name:hover {
+      color: #fff;
+    }
+    .model-chip-del {
+      background: transparent;
+      border: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0;
+      color: var(--muted);
+      padding: 3px 6px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .model-chip-del:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(255, 255, 255, 0.06);
+    }
     textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
     .param-row {
@@ -198,15 +269,25 @@
       </div>
       <div>
         <label>Endpoint URL (Full Chat Completions URL)</label>
-        <input type="text" id="endpoint" value="https://api.openai.com/v1/chat/completions" />
+        <div class="input-wrap">
+          <input type="text" id="endpoint" value="https://api.openai.com/v1/chat/completions" />
+          <button type="button" class="clear-btn" title="Clear endpoint" onclick="clearField('endpoint')">×</button>
+        </div>
       </div>
       <div>
         <label>API Key (Stored only in your browser localStorage)</label>
-        <input type="password" id="apiKey" placeholder="sk-... or gsk_... or AIza..." />
+        <div class="input-wrap">
+          <input type="password" id="apiKey" placeholder="sk-... or gsk_... or AIza..." />
+          <button type="button" class="clear-btn" title="Clear & delete saved API key" onclick="clearField('apiKey')">×</button>
+        </div>
       </div>
       <div>
-        <label>Model ID</label>
-        <input type="text" id="model" value="gpt-4o-mini" />
+        <label>Model ID (Auto-saved per endpoint)</label>
+        <div class="input-wrap">
+          <input type="text" id="model" value="gpt-4o-mini" placeholder="Type model ID..." />
+          <button type="button" class="clear-btn" title="Clear model input" onclick="clearField('model')">×</button>
+        </div>
+        <div class="saved-models" id="savedModelsList"></div>
       </div>
     </div>
 
@@ -418,25 +499,156 @@
     let currentView = "formatted"; // "formatted" | "raw"
     let formattedContent = 'Click "Send Request" to test your configuration...';
     let rawContent = 'Click "Send Request" to test your configuration...';
+    let modelSaveTimer = null;
 
-    // Load saved keys per endpoint from localStorage
     const endpointInput = document.getElementById("endpoint");
     const apiKeyInput = document.getElementById("apiKey");
     const modelInput = document.getElementById("model");
 
-    function loadSavedKey() {
-      const saved = localStorage.getItem("apikey_" + endpointInput.value.trim());
-      apiKeyInput.value = saved || "";
+    function getEndpointKey() {
+      return endpointInput.value.trim() || "default";
+    }
+
+    function getSavedModels() {
+      try {
+        const raw = localStorage.getItem("models_" + getEndpointKey());
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function setSavedModels(models) {
+      localStorage.setItem("models_" + getEndpointKey(), JSON.stringify(models));
+    }
+
+    function saveModelName(name) {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      const models = getSavedModels();
+      if (!models.includes(trimmed)) {
+        models.push(trimmed);
+        setSavedModels(models);
+      }
+      localStorage.setItem("last_model_" + getEndpointKey(), trimmed);
+      renderSavedModels();
+    }
+
+    function deleteSavedModel(name) {
+      const models = getSavedModels().filter(m => m !== name);
+      setSavedModels(models);
+      if (localStorage.getItem("last_model_" + getEndpointKey()) === name) {
+        localStorage.removeItem("last_model_" + getEndpointKey());
+      }
+      if (modelInput.value.trim() === name) {
+        modelInput.value = models[0] || "";
+        updatePreviews();
+      }
+      renderSavedModels();
+    }
+
+    function renderSavedModels() {
+      const container = document.getElementById("savedModelsList");
+      const models = getSavedModels();
+      const activeModel = modelInput.value.trim();
+      container.innerHTML = "";
+
+      models.forEach(m => {
+        const chip = document.createElement("div");
+        chip.className = "model-chip" + (m === activeModel ? " active" : "");
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "model-chip-name";
+        nameSpan.textContent = m;
+        nameSpan.title = "Select " + m;
+        nameSpan.onclick = () => {
+          modelInput.value = m;
+          localStorage.setItem("last_model_" + getEndpointKey(), m);
+          renderSavedModels();
+          updatePreviews();
+        };
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "model-chip-del";
+        delBtn.textContent = "×";
+        delBtn.title = "Remove " + m;
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteSavedModel(m);
+        };
+
+        chip.appendChild(nameSpan);
+        chip.appendChild(delBtn);
+        container.appendChild(chip);
+      });
+    }
+
+    function loadEndpointState(fallbackModel) {
+      const key = getEndpointKey();
+      const savedKey = localStorage.getItem("apikey_" + key);
+      apiKeyInput.value = savedKey || "";
+
+      const models = getSavedModels();
+      const lastModel = localStorage.getItem("last_model_" + key);
+
+      if (lastModel) {
+        modelInput.value = lastModel;
+        saveModelName(lastModel);
+      } else if (models.length > 0) {
+        modelInput.value = models[0];
+        renderSavedModels();
+      } else if (fallbackModel) {
+        modelInput.value = fallbackModel;
+        saveModelName(fallbackModel);
+      } else {
+        renderSavedModels();
+      }
+    }
+
+    function clearField(fieldId) {
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+      el.value = "";
+      el.focus();
+
+      if (fieldId === "apiKey") {
+        localStorage.removeItem("apikey_" + getEndpointKey());
+      } else if (fieldId === "model") {
+        localStorage.removeItem("last_model_" + getEndpointKey());
+        renderSavedModels();
+      }
+      updatePreviews();
     }
 
     apiKeyInput.addEventListener("input", () => {
-      localStorage.setItem("apikey_" + endpointInput.value.trim(), apiKeyInput.value);
+      const val = apiKeyInput.value;
+      if (val) {
+        localStorage.setItem("apikey_" + getEndpointKey(), val);
+      } else {
+        localStorage.removeItem("apikey_" + getEndpointKey());
+      }
     });
+
     endpointInput.addEventListener("input", () => {
-      loadSavedKey();
+      loadEndpointState();
       updatePreviews();
     });
-    modelInput.addEventListener("input", updatePreviews);
+
+    modelInput.addEventListener("input", () => {
+      renderSavedModels();
+      updatePreviews();
+      clearTimeout(modelSaveTimer);
+      modelSaveTimer = setTimeout(() => {
+        saveModelName(modelInput.value);
+      }, 600);
+    });
+
+    modelInput.addEventListener("blur", () => {
+      clearTimeout(modelSaveTimer);
+      saveModelName(modelInput.value);
+    });
 
     function renderResponseBox() {
       const outEl = document.getElementById("responseOutput");
@@ -465,13 +677,12 @@
     function applyPreset(name) {
       const p = PRESETS[name];
       endpointInput.value = p.endpoint;
-      modelInput.value = p.model;
       document.getElementById("use_max_completion_tokens").checked = p.maxComp;
       document.getElementById("use_max_tokens").checked = p.maxTok;
       if (name === "groq" || name === "gemini") {
         document.getElementById("use_logprobs").checked = false;
       }
-      loadSavedKey();
+      loadEndpointState(p.model);
       updatePreviews();
     }
 
@@ -556,6 +767,8 @@
       const endpoint = endpointInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
       const payload = buildPayload();
+
+      saveModelName(modelInput.value);
 
       const statusEl = document.getElementById("statusText");
       const sendBtn = document.getElementById("sendBtn");
@@ -693,7 +906,7 @@
     }
 
     // Initialize
-    loadSavedKey();
+    loadEndpointState("gpt-4o-mini");
     updatePreviews();
   </script>
 </body>
